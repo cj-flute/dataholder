@@ -41,6 +41,18 @@ def create_member():
     members.append(new_member)
     return {"message": "Member created successfully"}, 201
 
+# Update a member
+
+
+@app.route('/api/members/<int:member_id>', methods=['PUT'])
+def update_member(member_id):
+    if 0 <= member_id < len(members):
+        updated_member = request.get_json()
+        members[member_id] = updated_member
+        return {"message": "Member updated successfully"}
+    else:
+        return {"error": "Member not found"}, 404
+
 
 # Delete a member
 @app.route('/api/members/<int:member_id>', methods=['DELETE'])
