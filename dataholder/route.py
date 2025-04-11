@@ -41,26 +41,60 @@ def get_member(member_id):
 # Create a new member
 @app.route('/api/members', methods=['POST'])
 def create_member():
+    # Create a new member
     new_member_data = request.get_json()
-    new_member = User_data(
-        name=new_member_data['name'],
-        username=new_member_data['username'],
-        age=new_member_data['age'],
-        gender=new_member_data['gender'],
-        address=new_member_data['address'],
-        password=new_member_data['password'],
-        email=new_member_data['email'],
-        phone_no=new_member_data['phone_no']
-    )
-    db.session.add(new_member)
-    db.session.commit()
-    members.append(new_member_data)
-    return ({"message": "Member created successfully"},
-            jsonify(new_member.to_dict()), 201)
+    print(new_member_data)
+
+    # Validate the input data
+    required_fields = ['name', 'username', 'age', 'gender', 'address',
+                       'password', 'email', 'phone_no']
+    missing_fields = [
+        field for field in required_fields if field not in new_member_data]
+    if missing_fields:
+        return jsonify({"error": "Missing fields: " + ", ".join(missing_fields)}), 400
+
+    with app.app_context():
+        existing_member = User_data.query.filter_by(
+            username=new_member_data['username']).first()
+        if existing_member:
+            return jsonify({"error": "Username already exists"}), 400
+        existing_email = User_data.query.filter_by(
+            email=new_member_data['email']).first()
+        if existing_email:
+            return jsonify({"error": "Email already exists"}), 400
+        existing_phone_no = User_data.query.filter_by(
+            phone_no=new_member_data['phone_no']).first()
+        if existing_phone_no:
+            return jsonify({"error": "Phone number already exists"}), 400
+        # Check if the member already exists in the list
+        for member in members:
+            if member.username == new_member_data['username']:
+                return jsonify({"error": "M ember already exists"}), 400
+        # If the member does not exist, create a new one
+        # and add it to the list
+        # Create a new User_data object and add it to the database
+        # and the list
+
+        new_member = User_data(
+            name=new_member_data['name'],
+            username=new_member_data['username'],
+            age=new_member_data['age'],
+            gender=new_member_data['gender'],
+            address=new_member_data['address'],
+            password=new_member_data['password'],
+            email=new_member_data['email'],
+            phone_no=new_member_data['phone_no']
+        )
+        db.session.add(new_member)
+        db.session.commit()
+        members.append(new_member)
+        return jsonify({
+            "message": "Member created successfully",
+            "member": new_member.to_dict()
+        }), 201
+
 
 # Update a member
-
-
 @app.route('/api/members/<int:member_id>', methods=['PUT'])
 def update_member(member_id):
     if 0 <= member_id < len(members):
