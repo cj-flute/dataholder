@@ -27,15 +27,15 @@ def get_members():
 # return a single member
 @app.route('/api/members/<int:member_id>', methods=['GET'])
 def get_member(member_id):
-    if member_id >= 0 < len(members):
-        return jsonify(members[member_id].to_dict())
-    # return jsonify(members[member_id].to_dict())
-    else:
-        if member_id < 0:
-            return {"error": "Member ID cannot be negative"}, 400
-        if members_id > len(members):
-            return {"error": "Member ID out of range"}, 400
-        return {"error": "Member not found"}, 404
+    """Get a single member by ID"""
+    with app.app_context():
+        member = User_data.query.get(member_id)  # Query the database by ID
+        # print(member.id)
+
+        if member:
+            return jsonify(member.to_dict())  # Serialize and return the member
+        else:
+            return {"error": "Member not found"}, 404
 
 
 # Create a new member
@@ -97,22 +97,78 @@ def create_member():
 # Update a member
 @app.route('/api/members/<int:member_id>', methods=['PUT'])
 def update_member(member_id):
-    if 0 <= member_id < len(members):
-        updated_member = request.get_json()
-        members[member_id] = updated_member
-        return {"message": "Member updated successfully"}
-    else:
-        return {"error": "Member not found"}, 404
+    with app.app_context():
+        member = User_data.query.get(member_id)
+        if not member:
+            return {"error": "Member not found"}, 404
+        print(member)
+
+        # Update the member's data
+        # Validate the input data
+
+        updated_member_data = request.get_json()
+        print(updated_member_data)
+
+        # Update the member's fields if they are provided in the request
+        if 'name' in updated_member_data:
+            member.name = updated_member_data['name']
+        if 'username' in updated_member_data:
+            # Check if the new username already exists
+            existing_member = User_data.query.filter_by(
+                username=updated_member_data['username']).first()
+            if existing_member and existing_member.id != member_id:
+                return jsonify({"error": "Username already exists"}), 400
+            member.username = updated_member_data['username']
+        if 'age' in updated_member_data:
+            member.age = updated_member_data['age']
+        if 'gender' in updated_member_data:
+            member.gender = updated_member_data['gender']
+        if 'address' in updated_member_data:
+            member.address = updated_member_data['address']
+        if 'password' in updated_member_data:
+            member.password = updated_member_data['password']
+        if 'email' in updated_member_data:
+            # Check if the new email already exists
+            existing_email = User_data.query.filter_by(
+                email=updated_member_data['email']).first()
+            if existing_email and existing_email.id != member_id:
+                return jsonify({"error": "Email already exists"}), 400
+            member.email = updated_member_data['email']
+        if 'phone_no' in updated_member_data:
+            # Check if the new phone number already exists
+            existing_phone_no = User_data.query.filter_by(
+                phone_no=updated_member_data['phone_no']).first()
+            if existing_phone_no and existing_phone_no.id != member_id:
+                return jsonify({"error": "Phone number already exists"}), 400
+            member.phone_no = updated_member_data['phone_no']
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        return jsonify({
+            "message": "Member updated successfully",
+            "member": member.to_dict()
+        }), 200
 
 
 # Delete a member
 @app.route('/api/members/<int:member_id>', methods=['DELETE'])
 def delete_member(member_id):
-    if 0 <= member_id < len(members):
-        members.pop(member_id)
-        return {"message": "Member deleted successfully"}
-    else:
-        return {"error": "Member not found"}, 404
+    with app.app_context():
+        member = User_data.query.get(member_id)
+        if not member:
+            return {"error": "Member not found"}, 404
+        print(member)
+
+        # Delete the member from the database
+        db.session.delete(member)
+        db.session.commit()
+
+        # Optionally, remove the member from the in-memory list if used
+        global members
+        members = [m for m in members if m.id != member_id]
+
+        return jsonify({"message": "Member deleted successfully"}), 200
 
 
 @app.route('/')
